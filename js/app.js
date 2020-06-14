@@ -5,6 +5,27 @@ var shaderDir;
 var assetsDir;
 var programs = new Array();
 
+// camera parameters - init position
+var viewMatrix;
+var cx = -2.0,
+    cy = 2.0,
+    cz = 2.0,
+    elev = -40.0,
+    ang = -40.0,
+    roll = 0.01;
+
+// keys and movement parameters
+var keys = [],
+    vx = 0.0,
+    vy = 0.0,
+    vz = 0.0,
+    rvx = 0.0,
+    rvy = 0.0,
+    rvz = 0.0;
+
+window.addEventListener("keyup", utils.keyFunctionUp, false);
+window.addEventListener("keydown", utils.keyFunctionDown, false);
+
 // --------------- Assets guide
 // https://webgl2fundamentals.org/webgl/lessons/webgl-load-obj.html
 
@@ -46,7 +67,7 @@ void main() {
 */
 // Visualizer Main
 function main() {
-
+    utils.resizeCanvasToDisplaySize(gl.canvas);
     console.log("main() run");
     // Defining directional light
     var dirLightA = -utils.degToRad(60);
@@ -64,19 +85,28 @@ function main() {
     var normalMatrixPositionHandle = new Array();
     var materialDiffColorHandle = new Array();
 
-    // ***** CREATE OBJECT WORLD MATRICES *****
+    // ***** Instance MODELS & MATRICES *****
 
-    // CUBE ---- SETUP
+    // ***** Matrices *****
+    // PERSPECTIVE
+    var aspect = gl.canvas.width / gl.canvas.height;
+    var perspProjectionMatrix = utils.MakePerspective(90.0, aspect, 0.1, 1000.0);
+
+    // ***** Models *****
+    // CUBE
     var cubeMaterialColor = [0.6, 0.5, 0.7];
 
-    var cubeTx = 3.0,
-        cubeTy = 0.5,
-        cubeTz = -1.5,
+    var cubeTx = 0.0,
+        cubeTy = 0.0,
+        cubeTz = 0.0,
         cubeRx = 0.0,
         cubeRy = 0.0,
         cubeRz = 0.0,
-        cubeS = 0.5;
+        cubeS = 1.0;
     var cubeWorld = utils.MakeWorld(cubeTx, cubeTy, cubeTz, cubeRx, cubeRy, cubeRz, cubeS);
+
+    // SKELETJOHN
+
 
 
     // ---------------- REMOVE FOR ASYNC FUNCTION
@@ -120,11 +150,6 @@ function main() {
     lightColorHandle[0] = gl.getUniformLocation(programs[0], 'lightColor');
     normalMatrixPositionHandle[0] = gl.getUniformLocation(programs[0], 'nMatrix');
 
-
-    // create PERSPECTIVE MATRIX
-    var aspect = gl.canvas.width / gl.canvas.height;
-    var perspectiveMatrix = utils.MakePerspective(90.0, aspect, 0.1, 1000.0);
-
     var vaos = new Array();
     // initialize vertex array object and bind (VAO)
     vaos[0] = gl.createVertexArray();
@@ -154,28 +179,87 @@ function main() {
 
     // Draw the scene
     function drawScene() {
-        console.log("drawScene() run");
+        // console.log("drawScene() run");
         gl.clearColor(0.85, 0.85, 0.85, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        // ***** Matrices *****
-        // VIEW
-        var cx = 1.0,
-            cy = 2.0,
-            cz = 1.0;
-        var viewMatrix = utils.MakeView(cx, cy, cz, -45.0, -40.0);
+        // console.log(dirLight);
 
-        console.log(dirLight);
+        // view matrix with parameters
+        viewMatrix = utils.MakeViewR(cx, cy, cz, elev, ang, roll);
+
+        // ***** Move/rotate Camera with Keys (WASD + ARROWS)
+        // Prepare rotation transform matrix - quaternion
+        DVecMat = utils.transposeMatrix(viewMatrix);
+        DVecMat[12] = DVecMat[13] = DVecMat[14] = 0.0;
         
+        // define axes of rotation
+        xaxis = [DVecMat[0], DVecMat[4], DVecMat[8]];
+        yaxis = [DVecMat[1], DVecMat[5], DVecMat[9]];
+        zaxis = [DVecMat[2], DVecMat[6], DVecMat[10]];
+
+        if ((rvx != 0) || (rvy != 0) || (rvz != 0)) {
+            // theta
+            qx = Quaternion.fromAxisAngle(xaxis, utils.degToRad(rvx * 1));
+            // phi
+            qy = Quaternion.fromAxisAngle(yaxis, utils.degToRad(rvy * 1));
+            // psi
+            qz = Quaternion.fromAxisAngle(zaxis, utils.degToRad(rvz * 1));
+            
+            newDVecMat = utils.multiplyMatrices(utils.multiplyMatrices(utils.multiplyMatrices(
+                qy.toMatrix4(), qx.toMatrix4()), qz.toMatrix4()), DVecMat);
+            
+            // Rotation transform matrix for quaternion
+            R11 = newDVecMat[10];
+            console.log("R11: " + R11);
+            R12 = newDVecMat[8];
+            R13 = newDVecMat[9];
+            R21 = newDVecMat[2];
+            R22 = newDVecMat[0];
+            R23 = newDVecMat[1];
+            R31 = newDVecMat[6];
+            console.log("R31: " + R31);
+            R32 = newDVecMat[4];
+            R33 = newDVecMat[5];
+
+            if ((R31 < 1) && (R31 > -1)) {
+                theta = -Math.asin(R31);
+                phi = Math.atan2(R32 / Math.cos(theta), R33 / Math.cos(theta));
+                psi = Math.atan2(R21 / Math.cos(theta), R11 / Math.cos(theta));
+
+            } else {
+                phi = 0;
+                if (R31 <= -1) {
+                    theta = Math.PI / 2;
+                    psi = phi + Math.atan2(R12, R13);
+                } else {
+                    theta = -Math.PI / 2;
+                    psi = Math.atan2(-R12, -R13) - phi;
+                }
+            }
+            elev = theta / Math.PI * 180;
+            roll = phi / Math.PI * 180;
+            ang = psi / Math.PI * 180;
+        } 
+
+        // update the camera-position "WASD"
+        delta = utils.multiplyMatrixVector(DVecMat, [vx, vy, vz, 0.0]);
+        cx += delta[0] / 10;
+        cy += delta[1] / 10;
+        cz += delta[2] / 10;
+
+
+        // ***** World,View,Projection Matrices
+        var worldViewMatrix = utils.multiplyMatrices(viewMatrix, cubeWorld);
+        var wvpMatrix = utils.multiplyMatrices(perspProjectionMatrix, worldViewMatrix);
+
+        // lights
         var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
-        console.log(lightDirMatrix);
+
         var lightDirectionTransformed = utils.multiplyMatrix3Vector3(utils.sub3x3from4x4(lightDirMatrix), dirLight);
 
-        var worldViewMatrix = utils.multiplyMatrices(viewMatrix, cubeWorld);
-        var projectionMatrix = utils.multiplyMatrices(perspectiveMatrix, worldViewMatrix);
-
         // rendering -- (location, transpose, value)
-        gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(projectionMatrix));
+        gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(wvpMatrix));
 
         var cubeNormalMatrix = utils.invertMatrix(utils.transposeMatrix(worldViewMatrix));
 
@@ -191,7 +275,7 @@ function main() {
         gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0.0);
 
         window.requestAnimationFrame(drawScene);
-        console.log("scene drawn");
+        // console.log("scene drawn");
     }
 
 
@@ -217,23 +301,23 @@ async function init() {
         return;
     }
     utils.resizeCanvasToDisplaySize(gl.canvas);
+    // console.log("canvas ok");
 
-    console.log("canvas ok");
     // ***** Define SHADERS AND PROGRAMS *****
 
     // prepare shaders and program
     await utils.loadFiles([shaderDir + 'vs.glsl', shaderDir + 'fs.glsl'], function (shaderText) {
         var vertexShader = utils.createShader(gl, gl.VERTEX_SHADER, shaderText[0]);
+        gl.compileShader(vertexShader);
         var fragmentShader = utils.createShader(gl, gl.FRAGMENT_SHADER, shaderText[1]);
-
+        gl.compileShader(fragmentShader);
         programs[0] = utils.createProgram(gl, vertexShader, fragmentShader);
-        console.log("programs updated");
+        // console.log("programs updated");
     });
-
+    gl.linkProgram(programs[0]);
     gl.useProgram(programs[0]);
     // run main
     main();
 }
 
 window.onload = init();
-

@@ -129,30 +129,30 @@ var utils = {
         var text = await response.text();
         callback(text, data);
     },
-    
-    loadFiles:async function (urls, callback, errorCallback) {
+
+    loadFiles: async function (urls, callback, errorCallback) {
         console.log("start load files");
-    var numUrls = urls.length;
-    var numComplete = 0;
-    var result = [];
+        var numUrls = urls.length;
+        var numComplete = 0;
+        var result = [];
 
-		// Callback for a single file
-		function partialCallback(text, urlIndex) {
-			result[urlIndex] = text;
-			numComplete++;
-            console.log("num complete: "+numComplete);
+        // Callback for a single file
+        function partialCallback(text, urlIndex) {
+            result[urlIndex] = text;
+            numComplete++;
+            console.log("num complete: " + numComplete);
 
-			// When all files have downloaded
-			if (numComplete == numUrls) {
+            // When all files have downloaded
+            if (numComplete == numUrls) {
                 console.log("all files downloaded")
-				callback(result);
-			}
-		}
+                callback(result);
+            }
+        }
 
-		for (var i = 0; i < numUrls; i++) {
-			await this.loadFile(urls[i], i, partialCallback, errorCallback);
-		}
-	},
+        for (var i = 0; i < numUrls; i++) {
+            await this.loadFile(urls[i], i, partialCallback, errorCallback);
+        }
+    },
 
 
     /* //must use ASYNC because of many shaders used
@@ -514,7 +514,7 @@ var utils = {
         var Rz = this.MakeRotateZMatrix(rz);
         var S = this.MakeScaleMatrix(s);
         var T = this.MakeTranslateMatrix(tx, ty, tz);
-
+        
         out = this.multiplyMatrices(Rz, S);
         out = this.multiplyMatrices(Ry, out);
         out = this.multiplyMatrices(Rx, out);
@@ -523,22 +523,45 @@ var utils = {
         return out;
     },
 
-    MakeView: function (cx, cy, cz, elev, ang) {
+    MakeView: function(cx, cy, cz, elev, ang) {
+	// Creates in {out} a view matrix. The camera is centerd in ({cx}, {cy}, {cz}).
+	// It looks {ang} degrees on y axis, and {elev} degrees on the x axis.
+		
+		var T = [];
+		var Rx = [];
+		var Ry = [];
+		var tmp = [];
+		var out = [];
+
+		T =  this.MakeTranslateMatrix(-cx, -cy, -cz);
+		Rx = this.MakeRotateXMatrix(-elev);
+		Ry = this.MakeRotateYMatrix(-ang);
+
+		tmp = this.multiplyMatrices(Ry, T);
+		out = this.multiplyMatrices(Rx, tmp);
+
+		return out;
+	},
+    
+    // UPDATED to include Roll
+    MakeViewR: function (cx, cy, cz, elev, ang, roll) {
         // Creates in {out} a view matrix. The camera is centerd in ({cx}, {cy}, {cz}).
         // It looks {ang} degrees on y axis, and {elev} degrees on the x axis.
 
         var T = [];
         var Rx = [];
         var Ry = [];
-        var tmp = [];
+        var Rz = [];
         var out = [];
 
         T = this.MakeTranslateMatrix(-cx, -cy, -cz);
         Rx = this.MakeRotateXMatrix(-elev);
         Ry = this.MakeRotateYMatrix(-ang);
-
-        tmp = this.multiplyMatrices(Ry, T);
-        out = this.multiplyMatrices(Rx, tmp);
+        Rz = this.MakeRotateZMatrix(-roll);
+        
+        out = this.multiplyMatrices(Ry, T);
+        out = this.multiplyMatrices(Rx, out);
+        out = this.multiplyMatrices(Rz, out);
 
         return out;
     },
@@ -604,5 +627,125 @@ var utils = {
         out[11] = -nc[2];
 
         return out;
+    },
+
+
+
+
+    // *** KEY FUNCTIONS
+
+    keyFunctionDown: function (e) {
+        if (!keys[e.keyCode]) {
+            keys[e.keyCode] = true;
+            switch (e.keyCode) {
+                case 37:
+                    //console.log("KeyUp   - Dir LEFT");
+                    rvy = rvy + 1.0;
+                    break;
+                case 39:
+                    //console.log("KeyUp   - Dir RIGHT");
+                    rvy = rvy - 1.0;
+                    break;
+                case 38:
+                    //console.log("KeyUp   - Dir UP");
+                    rvx = rvx + 1.0;
+                    break;
+                case 40:
+                    //console.log("KeyUp   - Dir DOWN");
+                    rvx = rvx - 1.0;
+                    break;
+                case 81:
+                    //console.log("KeyUp   - Dir ROLL LEFT");
+                    rvz = rvz + 1.0;
+                    break;
+                case 69:
+                    //console.log("KeyUp   - Dir ROLL RIGHT");
+                    rvz = rvz - 1.0;
+                    break;
+                case 65:
+                    //console.log("KeyUp   - Pos LEFT");
+                    vx = vx - 1.0;
+                    break;
+                case 68:
+                    //console.log("KeyUp   - Pos RIGHT");
+                    vx = vx + 1.0;
+                    break;
+                case 82:
+                    //console.log("KeyUp   - Pos UP");
+                    vy = vy + 1.0;
+                    break;
+                case 70:
+                    //console.log("KeyUp   - Pos DOWN");
+                    vy = vy - 1.0;
+                    break;
+                case 87:
+                    //console.log("KeyUp   - Pos FORWARD");
+                    vz = vz - 1.0;
+                    break;
+                case 83:
+                    //console.log("KeyUp   - Pos BACKWARD");
+                    vz = vz + 1.0;
+                    break;
+            }
+            console.log(vx + " " + vy + " " + vz + " " + rvx + " " + rvy + " " + rvz);
+        }
+        console.log(e.keyCode);
+    },
+
+    keyFunctionUp: function (e) {
+        if (keys[e.keyCode]) {
+            keys[e.keyCode] = false;
+            switch (e.keyCode) {
+                case 37:
+                    console.log("KeyDown  - Dir LEFT");
+                    rvy = rvy - 1.0;
+                    break;
+                case 39:
+                    console.log("KeyDown - Dir RIGHT");
+                    rvy = rvy + 1.0;
+                    break;
+                case 38:
+                    console.log("KeyDown - Dir UP");
+                    rvx = rvx - 1.0;
+                    break;
+                case 40:
+                    console.log("KeyDown - Dir DOWN");
+                    rvx = rvx + 1.0;
+                    break;
+                case 81:
+                    console.log("KeyDown - Dir ROLL LEFT");
+                    rvz = rvz - 1.0;
+                    break;
+                case 69:
+                    console.log("KeyDown - Dir ROLL RIGHT");
+                    rvz = rvz + 1.0;
+                    break;
+                case 65:
+                    console.log("KeyDown - Pos LEFT");
+                    vx = vx + 1.0;
+                    break;
+                case 68:
+                    console.log("KeyDown - Pos RIGHT");
+                    vx = vx - 1.0;
+                    break;
+                case 82:
+                    console.log("KeyDown - Pos UP");
+                    vy = vy - 1.0;
+                    break;
+                case 70:
+                    console.log("KeyDown - Pos DOWN");
+                    vy = vy + 1.0;
+                    break;
+                case 87:
+                    console.log("KeyDown - Pos FORWARD");
+                    vz = vz + 1.0;
+                    break;
+                case 83:
+                    console.log("KeyDown - Pos BACKWARD");
+                    vz = vz - 1.0;
+                    break;
+            }
+            //	console.log(vx + " " + vy + " " + vz + " " + rvx + " " + rvy + " " + rvz);
+        }
     },
 }
