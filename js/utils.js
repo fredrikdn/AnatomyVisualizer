@@ -514,7 +514,7 @@ var utils = {
         var Rz = this.MakeRotateZMatrix(rz);
         var S = this.MakeScaleMatrix(s);
         var T = this.MakeTranslateMatrix(tx, ty, tz);
-        
+
         out = this.multiplyMatrices(Rz, S);
         out = this.multiplyMatrices(Ry, out);
         out = this.multiplyMatrices(Rx, out);
@@ -523,26 +523,26 @@ var utils = {
         return out;
     },
 
-    MakeView: function(cx, cy, cz, elev, ang) {
-	// Creates in {out} a view matrix. The camera is centerd in ({cx}, {cy}, {cz}).
-	// It looks {ang} degrees on y axis, and {elev} degrees on the x axis.
-		
-		var T = [];
-		var Rx = [];
-		var Ry = [];
-		var tmp = [];
-		var out = [];
+    MakeView: function (cx, cy, cz, elev, ang) {
+        // Creates in {out} a view matrix. The camera is centerd in ({cx}, {cy}, {cz}).
+        // It looks {ang} degrees on y axis, and {elev} degrees on the x axis.
 
-		T =  this.MakeTranslateMatrix(-cx, -cy, -cz);
-		Rx = this.MakeRotateXMatrix(-elev);
-		Ry = this.MakeRotateYMatrix(-ang);
+        var T = [];
+        var Rx = [];
+        var Ry = [];
+        var tmp = [];
+        var out = [];
 
-		tmp = this.multiplyMatrices(Ry, T);
-		out = this.multiplyMatrices(Rx, tmp);
+        T = this.MakeTranslateMatrix(-cx, -cy, -cz);
+        Rx = this.MakeRotateXMatrix(-elev);
+        Ry = this.MakeRotateYMatrix(-ang);
 
-		return out;
-	},
-    
+        tmp = this.multiplyMatrices(Ry, T);
+        out = this.multiplyMatrices(Rx, tmp);
+
+        return out;
+    },
+
     // UPDATED to include Roll
     MakeViewR: function (cx, cy, cz, elev, ang, roll) {
         // Creates in {out} a view matrix. The camera is centerd in ({cx}, {cy}, {cz}).
@@ -558,7 +558,7 @@ var utils = {
         Rx = this.MakeRotateXMatrix(-elev);
         Ry = this.MakeRotateYMatrix(-ang);
         Rz = this.MakeRotateZMatrix(-roll);
-        
+
         out = this.multiplyMatrices(Ry, T);
         out = this.multiplyMatrices(Rx, out);
         out = this.multiplyMatrices(Rz, out);
@@ -632,7 +632,40 @@ var utils = {
 
 
 
-    // *** KEY FUNCTIONS
+    // *** KEY & MOUSE FUNCTIONS
+
+    doMouseDown: function (e) {
+        lastMouseX = event.pageX;
+        lastMouseY = event.pageY;
+        mouseState = true;
+    },
+
+    doMouseUp: function (e) {
+        lastMouseX = -100;
+        lastMouseY = -100;
+        mouseState = false;
+    },
+
+    doMouseMove: function (e) {
+        if (mouseState) {
+            var dx = event.pageX - lastMouseX;
+            var dy = lastMouseY - event.pageY;
+            lastMouseX = event.pageX;
+            lastMouseY = event.pageY;
+
+            if ((dx != 0) || (dy != 0)) {
+                cubeRx = cubeRx + 0.5 * dx;
+                cubeRy = cubeRy - 0.5 * dy;
+            }
+        }
+    },
+
+    doMouseWheel: function (e) {
+        var nLookRadius = camRadius + event.wheelDelta / 200.0;
+        if ((nLookRadius > 2.0) && (nLookRadius < 100.0)) {
+            camRadius = nLookRadius;
+        }
+    },
 
     keyFunctionDown: function (e) {
         if (!keys[e.keyCode]) {

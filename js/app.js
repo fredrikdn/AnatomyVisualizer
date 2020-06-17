@@ -7,22 +7,37 @@ var programs = new Array();
 
 // camera parameters - init position
 var viewMatrix;
-var cx = -2.0,
-    cy = 2.0,
-    cz = 2.0,
-    elev = -40.0,
-    ang = -40.0,
-    roll = 0.01;
+var cx = 0.0,
+    cy = 0.0,
+    cz = 0.0,
+    elev = 0.0,
+    ang = 0.0,
+    roll = 0.0;
+//camRadius = 10.0;
 
-// keys and movement parameters
+// Object parameters - init
+var cubeWorld;
+var cubeTx = 0.0,
+    cubeTy = 0.0,
+    cubeTz = -4.0,
+    cubeRx = 45.0,
+    cubeRy = 0.0,
+    cubeRz = 0.0,
+    cubeS = 1.0;
+
+// mouse & keys -- OBJECT movement parameters
 var keys = [],
     vx = 0.0,
     vy = 0.0,
     vz = 0.0,
     rvx = 0.0,
     rvy = 0.0,
-    rvz = 0.0;
+    rvz = 0.0,
+    mouseState = false,
+    lastMouseX = -100,
+    lastMouseY = -100;
 
+// listeners
 window.addEventListener("keyup", utils.keyFunctionUp, false);
 window.addEventListener("keydown", utils.keyFunctionDown, false);
 
@@ -73,7 +88,7 @@ function main() {
     var dirLightA = -utils.degToRad(60);
     var dirLightB = -utils.degToRad(120);
     var dirLight = [Math.cos(dirLightA) * Math.cos(dirLightB), Math.sin(dirLightA), Math.cos(dirLightA) * Math.sin(dirLightB)];
-    var dirLightColor = [0.5, 0.5, 1.0];
+    var dirLightColor = [0.5, 1.0, 0.2];
 
     // PARAMETERS
     var positionAttributeLocation = new Array(),
@@ -90,21 +105,11 @@ function main() {
     // ***** Matrices *****
     // PERSPECTIVE
     var aspect = gl.canvas.width / gl.canvas.height;
-    var perspProjectionMatrix = utils.MakePerspective(90.0, aspect, 0.1, 1000.0);
+    var perspProjMatrix = utils.MakePerspective(90.0, aspect, 0.1, 1000.0);
 
     // ***** Models *****
     // CUBE
     var cubeMaterialColor = [0.6, 0.5, 0.7];
-
-    var cubeTx = 0.0,
-        cubeTy = 0.0,
-        cubeTz = 0.0,
-        cubeRx = 0.0,
-        cubeRy = 0.0,
-        cubeRz = 0.0,
-        cubeS = 1.0;
-    var cubeWorld = utils.MakeWorld(cubeTx, cubeTy, cubeTz, cubeRx, cubeRy, cubeRz, cubeS);
-
     // SKELETJOHN
 
 
@@ -131,17 +136,8 @@ function main() {
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
 
-    // shaders -- sync
-    /*
-    // define shaders + program(cube)
-    var vert1 = utils.createShader(gl, gl.VERTEX_SHADER, vs);
-    var frag1 = utils.createShader(gl, gl.FRAGMENT_SHADER, fs);
-    programs[0] = utils.createProgram(gl, vert1, frag1);
-    // installs the program object specified, as part of current rendering state
-    gl.useProgram(programs[0]);
-*/
 
-    // Lambert diffuse
+    // Lambert diffuse + ambient
     positionAttributeLocation[0] = gl.getAttribLocation(programs[0], "inPosition");
     normalAttributeLocation[0] = gl.getAttribLocation(programs[0], "inNormal");
     matrixLocation[0] = gl.getUniformLocation(programs[0], "matrix");
@@ -149,7 +145,9 @@ function main() {
     lightDirectionHandle[0] = gl.getUniformLocation(programs[0], 'lightDirection');
     lightColorHandle[0] = gl.getUniformLocation(programs[0], 'lightColor');
     normalMatrixPositionHandle[0] = gl.getUniformLocation(programs[0], 'nMatrix');
-
+    
+    
+    
     var vaos = new Array();
     // initialize vertex array object and bind (VAO)
     vaos[0] = gl.createVertexArray();
@@ -185,14 +183,20 @@ function main() {
 
         // console.log(dirLight);
 
-        // view matrix with parameters
-        viewMatrix = utils.MakeViewR(cx, cy, cz, elev, ang, roll);
+        // view matrix with parameters (cx, cy, cz, elev, ang, roll) {aligned to the Z-axis}
+        viewMatrix = utils.MakeViewR(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
-        // ***** Move/rotate Camera with Keys (WASD + ARROWS)
+        // Model world space - update for movement
+        cubeWorld = utils.MakeWorld(cubeTx, cubeTy, cubeTz, cubeRx, cubeRy, cubeRz, cubeS);
+        // ***** MOVE/ROTATE/ZOOM with Keys & Mouse (WASD)
+
+        // quaternion ----- NOT USED
+        /*
         // Prepare rotation transform matrix - quaternion
-        DVecMat = utils.transposeMatrix(viewMatrix);
+       
+        DVecMat = utils.transposeMatrix(cubeWorld);
         DVecMat[12] = DVecMat[13] = DVecMat[14] = 0.0;
-        
+
         // define axes of rotation
         xaxis = [DVecMat[0], DVecMat[4], DVecMat[8]];
         yaxis = [DVecMat[1], DVecMat[5], DVecMat[9]];
@@ -201,27 +205,26 @@ function main() {
         if ((rvx != 0) || (rvy != 0) || (rvz != 0)) {
             // theta
             qx = Quaternion.fromAxisAngle(xaxis, utils.degToRad(rvx * 1));
-            // phi
-            qy = Quaternion.fromAxisAngle(yaxis, utils.degToRad(rvy * 1));
             // psi
+            qy = Quaternion.fromAxisAngle(yaxis, utils.degToRad(rvy * 1));
+            // phi
             qz = Quaternion.fromAxisAngle(zaxis, utils.degToRad(rvz * 1));
-            
+
             newDVecMat = utils.multiplyMatrices(utils.multiplyMatrices(utils.multiplyMatrices(
                 qy.toMatrix4(), qx.toMatrix4()), qz.toMatrix4()), DVecMat);
-            
+
             // Rotation transform matrix for quaternion
             R11 = newDVecMat[10];
-            console.log("R11: " + R11);
             R12 = newDVecMat[8];
             R13 = newDVecMat[9];
             R21 = newDVecMat[2];
             R22 = newDVecMat[0];
             R23 = newDVecMat[1];
             R31 = newDVecMat[6];
-            console.log("R31: " + R31);
             R32 = newDVecMat[4];
             R33 = newDVecMat[5];
 
+            // gimbal order
             if ((R31 < 1) && (R31 > -1)) {
                 theta = -Math.asin(R31);
                 phi = Math.atan2(R32 / Math.cos(theta), R33 / Math.cos(theta));
@@ -237,21 +240,34 @@ function main() {
                     psi = Math.atan2(-R12, -R13) - phi;
                 }
             }
-            elev = theta / Math.PI * 180;
-            roll = phi / Math.PI * 180;
-            ang = psi / Math.PI * 180;
-        } 
+            cubeRx = theta / Math.PI * 180;
+            cubeRz = phi / Math.PI * 180;
+            cubeRy = psi / Math.PI * 180;
+        }
+*/
 
-        // update the camera-position "WASD"
-        delta = utils.multiplyMatrixVector(DVecMat, [vx, vy, vz, 0.0]);
-        cx += delta[0] / 10;
-        cy += delta[1] / 10;
-        cz += delta[2] / 10;
+        // KEYBOARD:
+        // update the position according to vx,vy,vz ==> "WASD"
+        console.log("cx: " + cx + "-- cy: " + cy + "-- cz: " + cz);
+        console.log("vx: " + vx + "-- vy: " + vy + "-- vz: " + vz);
+        delta = [vx, vy, vz, 0.0];
+        cubeTx -= delta[0] / 10;
+        cubeTy += delta[1] / 10;
+        cubeTz -= delta[2] / 10;
 
+
+        //MOUSE:
+
+        // zoom using mWheel
+        var deltaDist = Math.sqrt(Math.pow(cubeTx - cx, 2.0) + Math.pow(cubeTz - cz, 2.0));
+        console.log("Distance cube--cam: " + deltaDist);
+
+
+        console.log("cubx: " + cubeTx + "-- cuby: " + cubeTy + "-- cubz: " + cubeTz);
 
         // ***** World,View,Projection Matrices
         var worldViewMatrix = utils.multiplyMatrices(viewMatrix, cubeWorld);
-        var wvpMatrix = utils.multiplyMatrices(perspProjectionMatrix, worldViewMatrix);
+        var wvpMatrix = utils.multiplyMatrices(perspProjMatrix, worldViewMatrix);
 
         // lights
         var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
@@ -301,6 +317,11 @@ async function init() {
         return;
     }
     utils.resizeCanvasToDisplaySize(gl.canvas);
+
+    canvas.addEventListener("mousewheel", utils.doMouseWheel, false);
+    canvas.addEventListener("mousedown", utils.doMouseDown, false);
+    canvas.addEventListener("mouseup", utils.doMouseUp, false);
+    canvas.addEventListener("mousemove", utils.doMouseMove, false);
     // console.log("canvas ok");
 
     // ***** Define SHADERS AND PROGRAMS *****

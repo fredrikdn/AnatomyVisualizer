@@ -3,7 +3,6 @@
 precision mediump float;
 
 in vec3 fsNormal;
-in vec3 fsPos;
 
 uniform vec3 mDiffColor;
 uniform vec3 lightDirection; 
