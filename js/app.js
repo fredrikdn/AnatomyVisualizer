@@ -3,7 +3,9 @@ var gl;
 var baseDir;
 var shaderDir;
 var assetsDir;
-var programs = new Array();
+var program;
+var modelStr = 'skeleton.obj';
+var textureStr = 'skeleton.png';
 
 // camera parameters - init position
 var viewMatrix;
@@ -16,14 +18,16 @@ var cx = 0.0,
 //camRadius = 10.0;
 
 // Object parameters - init
-var cubeWorld;
-var cubeTx = 0.0,
-    cubeTy = 0.0,
-    cubeTz = -4.0,
-    cubeRx = 45.0,
-    cubeRy = 0.0,
-    cubeRz = 0.0,
-    cubeS = 1.0;
+var objectWorld = null,
+    skelMesh = null;
+// Skeleton {0, -2.5, -4, 0, 10, 0, 0.07}
+var Tx = 0.0,
+    Ty = -2.50,
+    Tz = -4.0,
+    Rx = 0.0,
+    Ry = 10.0,
+    Rz = 0.0,
+    Scale = 0.07;
 
 // mouse & keys -- OBJECT movement parameters
 var keys = [],
@@ -37,6 +41,8 @@ var keys = [],
     lastMouseX = -100,
     lastMouseY = -100;
 
+
+
 // listeners
 window.addEventListener("keyup", utils.keyFunctionUp, false);
 window.addEventListener("keydown", utils.keyFunctionDown, false);
@@ -45,87 +51,10 @@ window.addEventListener("keydown", utils.keyFunctionDown, false);
 // https://webgl2fundamentals.org/webgl/lessons/webgl-load-obj.html
 
 console.log("app.js started");
-// shaders -- sync
-/*
-var vs = `#version 300 es
 
-in vec3 inPosition;
-in vec3 inNormal;
-out vec3 fsNormal;
-
-uniform mat4 matrix; 
-uniform mat4 nMatrix;     //matrix to transform normals
-
-void main() {
-  fsNormal = mat3(nMatrix) * inNormal; 
-  gl_Position = matrix * vec4(inPosition, 1.0);
-}`;
-
-var fs = `#version 300 es
-
-precision mediump float;
-
-in vec3 fsNormal;
-out vec4 outColor;
-
-uniform vec3 mDiffColor;
-uniform vec3 lightDirection; 
-uniform vec3 lightColor;   
-
-void main() {
-
-  vec3 nNormal = normalize(fsNormal);
-  vec3 lDir = lightDirection; 
-  vec3 lambertColor = mDiffColor * lightColor * dot(-lDir,nNormal);
-  outColor = vec4(clamp(lambertColor, 0.0, 1.0), 1.0);
-}`;
-*/
-// Visualizer Main
+// Visualizer Mainada
 function main() {
     utils.resizeCanvasToDisplaySize(gl.canvas);
-    console.log("main() run");
-    // Defining directional light
-    var dirLightA = -utils.degToRad(60);
-    var dirLightB = -utils.degToRad(120);
-    var dirLight = [Math.cos(dirLightA) * Math.cos(dirLightB), Math.sin(dirLightA), Math.cos(dirLightA) * Math.sin(dirLightB)];
-    var dirLightColor = [0.5, 1.0, 0.2];
-
-    // PARAMETERS
-    var positionAttributeLocation = new Array(),
-        normalAttributeLocation = new Array();
-    var matrixLocation = new Array(),
-        materialDiffColorHandle = new Array();
-    var lightDirectionHandle = new Array(),
-        lightColorHandle = new Array();
-    var normalMatrixPositionHandle = new Array();
-    var materialDiffColorHandle = new Array();
-
-    // ***** Instance MODELS & MATRICES *****
-
-    // ***** Matrices *****
-    // PERSPECTIVE
-    var aspect = gl.canvas.width / gl.canvas.height;
-    var perspProjMatrix = utils.MakePerspective(90.0, aspect, 0.1, 1000.0);
-
-    // ***** Models *****
-    // CUBE
-    var cubeMaterialColor = [0.6, 0.5, 0.7];
-    // SKELETJOHN
-
-
-
-    // ---------------- REMOVE FOR ASYNC FUNCTION
-    /*
-    var canvas = document.getElementById("canvas");
-    gl = canvas.getContext("webgl2");
-    if (!gl) {
-        document.write("GL context not opened");
-        return;
-    }
-    utils.resizeCanvasToDisplaySize(gl.canvas);
-*/
-
-    // Set GLOBAL states:
     // set viewport (Lower-left corner of the viewport, width, height)
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     // clearing BUFFERS
@@ -137,57 +66,181 @@ function main() {
     gl.cullFace(gl.BACK);
 
 
-    // Lambert diffuse + ambient
-    positionAttributeLocation[0] = gl.getAttribLocation(programs[0], "inPosition");
-    normalAttributeLocation[0] = gl.getAttribLocation(programs[0], "inNormal");
-    matrixLocation[0] = gl.getUniformLocation(programs[0], "matrix");
-    materialDiffColorHandle[0] = gl.getUniformLocation(programs[0], 'mDiffColor');
-    lightDirectionHandle[0] = gl.getUniformLocation(programs[0], 'lightDirection');
-    lightColorHandle[0] = gl.getUniformLocation(programs[0], 'lightColor');
-    normalMatrixPositionHandle[0] = gl.getUniformLocation(programs[0], 'nMatrix');
-    
-    
-    
-    var vaos = new Array();
-    // initialize vertex array object and bind (VAO)
-    vaos[0] = gl.createVertexArray();
-    gl.bindVertexArray(vaos[0]);
+    // Model - Position (vertices), normals, indices, UVcoords
+    var skelVertices = skelMesh.vertices;
+    var skelNormals = skelMesh.vertexNormals;
+    var skelIndices = skelMesh.indices;
+    var skelTexCoords = skelMesh.textures;
 
-    // ***** Create and bind buffers for position, normals, index:
-    // Create and bind POSITION buffer -- vertices from model
+
+
+
+    // ***** MATRICES, LIGHTS, COLOR *****
+
+    // Perspective
+    var aspect = gl.canvas.width / gl.canvas.height;
+    var perspProjMatrix = utils.MakePerspective(90.0, aspect, 0.01, 1000.0);
+
+    // Skeleton material color
+    var objMaterialColor = [0.6, 0.1, 0.7];
+
+    // Defining directional light
+    // 0 --> viewing direction
+    var dirLightA = -utils.degToRad(0);
+    var dirLightB = -utils.degToRad(90);
+    var dirLight = [Math.cos(dirLightA) * Math.cos(dirLightB), Math.sin(dirLightA), Math.cos(dirLightA) * Math.sin(dirLightB)];
+    var dirLightColor = [0.5, 0.2, 0.7];
+
+
+
+
+    // ***** SHADERS & BUFFERS *****
+    // Init attributes
+    var positionAttributeLocation = new Array(),
+        normalAttributeLocation = new Array();
+    var matrixLocation = new Array(),
+        materialDiffColorHandle = new Array();
+    var lightDirectionHandle = new Array(),
+        lightDirMatrixPositionHandle = new Array(),
+        lightColorHandle = new Array();
+    var normalMatrixPositionHandle = new Array();
+    var materialDiffColorHandle = new Array();
+    var textureCoordinateLocation = new Array();
+    var textureUniform = new Array();
+
+
+    // Create a texture
+    /*
+    imgtx = new Image();
+    imgtx.onload = function () {
+        var textureId = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + 0);
+        gl.bindTexture(gl.TEXTURE_2D, textureId);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgtx);
+        // set the filtering so we don't need mips
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    }
+    imgtx.src = TextureData;
+    */
+
+    // Attributes located in the shaders ==> attach to program
+    // AttribLocations
+    positionAttributeLocation[0] = gl.getAttribLocation(program, "inPosition");
+    normalAttributeLocation[0] = gl.getAttribLocation(program, "inNormal");
+    textureCoordinateLocation[0] = gl.getAttribLocation(program, "inUV");
+
+    // Uniforms
+    matrixLocation[0] = gl.getUniformLocation(program, "pMatrix");
+    normalMatrixPositionHandle[0] = gl.getUniformLocation(program, 'nMatrix');
+
+    textureUniform[0] = gl.getUniformLocation(program, "uTexture");
+
+    materialDiffColorHandle[0] = gl.getUniformLocation(program, 'mDiffColor');
+
+    lightDirectionHandle[0] = gl.getUniformLocation(program, 'lightDirection');
+    lightColorHandle[0] = gl.getUniformLocation(program, 'lightColor');
+    lightDirMatrixPositionHandle[0] = gl.getUniformLocation(program, 'lightDirMatrix');
+
+
+
+
+    // initialize vertex array object and bind (VAO)
+    var vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+
+    // Initialize and bind buffers for position, normals, index:
+    // POSITION buffer -- vertices from model
     var positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(skelVertices), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(positionAttributeLocation[0]);
     gl.vertexAttribPointer(positionAttributeLocation[0], 3, gl.FLOAT, false, 0, 0);
 
-    // Create and bind NORMAL buffer -- normals from model
+    // TEXTURE buffer -- texCoords from model
+    var uvBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(skelTexCoords), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(textureCoordinateLocation[0]);
+    gl.vertexAttribPointer(textureCoordinateLocation[0], 2, gl.FLOAT, false, 0, 0);
+
+    // NORMAL buffer -- normals from model
     var normalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normals), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(skelNormals), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(normalAttributeLocation[0]);
     gl.vertexAttribPointer(normalAttributeLocation[0], 3, gl.FLOAT, false, 0, 0);
-
-    // Create and bind INDEX buffer -- indices from model
+    
+    // INDEX buffer -- indices from model
     var indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(skelIndices), gl.STATIC_DRAW);
+
+    // TEXTURE 
+    var skelTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, skelTexture);
+
+    var imgtx = new Image();
+    imgtx.src = assetsDir + textureStr;
+    imgtx.onload = function () {
+        gl.bindTexture(gl.TEXTURE_2D, skelTexture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgtx);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.generateMipmap(gl.TEXTURE_2D);
+    };
+
+    /*
+    var textureId = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + 0);
+    gl.bindTexture(gl.TEXTURE_2D, textureId);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgtx);
+    // set the filtering so we don't need mips
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+*/
+
+    /*
+    // Vertices
+    gl.bindBuffer(gl.ARRAY_BUFFER, skelMesh.vertexBuffer);
+    gl.vertexAttribPointer(programs[0].positionAttributeLocation[0], skelMesh.vertexBuffer,itemSize, gl.FLOAT, false, 0, 0);
+    
+    // TextureVertices
+    if(!skelMesh.textures.length) {
+        gl.disableVertexAttribArray(programs[0].textureCoordinateLocation[0]);
+    } else {
+        gl.enableVertexAttrobArray(programs[0].textureCoordinateLocation[0]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, skelMesh.textureBuffer);
+        gl.vertexAttribPointer(programs[0].textureCoordinateLocation[0], skelMesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    }
+    
+    // Normals
+    gl.bindBuffer(gl.ARRAY_BUFFER, skelMesh.normalBuffer);
+    gl.vertexAttribPointer(programs[0].normalAttributeLocation[0], skelMesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    
+    // Indices
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skelMesh.indexBuffer);
+    */
 
     drawScene();
 
     // Draw the scene
     function drawScene() {
         // console.log("drawScene() run");
+        utils.resizeCanvasToDisplaySize(gl.canvas);
         gl.clearColor(0.85, 0.85, 0.85, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        // console.log(dirLight);
 
         // view matrix with parameters (cx, cy, cz, elev, ang, roll) {aligned to the Z-axis}
         viewMatrix = utils.MakeViewR(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         // Model world space - update for movement
-        cubeWorld = utils.MakeWorld(cubeTx, cubeTy, cubeTz, cubeRx, cubeRy, cubeRz, cubeS);
+        objectWorld = utils.MakeWorld(Tx, Ty, Tz, Rx, Ry, Rz, Scale);
         // ***** MOVE/ROTATE/ZOOM with Keys & Mouse (WASD)
 
         // quaternion ----- NOT USED
@@ -251,54 +304,59 @@ function main() {
         console.log("cx: " + cx + "-- cy: " + cy + "-- cz: " + cz);
         console.log("vx: " + vx + "-- vy: " + vy + "-- vz: " + vz);
         delta = [vx, vy, vz, 0.0];
-        cubeTx -= delta[0] / 10;
-        cubeTy += delta[1] / 10;
-        cubeTz -= delta[2] / 10;
+        Tx -= delta[0] / 10;
+        Ty += delta[1] / 10;
+        Tz -= delta[2] / 10;
+
+        console.log("X: " + Tx + "-- Y: " + Ty + "-- Z: " + Tz);
 
 
-        //MOUSE:
-
-        // zoom using mWheel
-        var deltaDist = Math.sqrt(Math.pow(cubeTx - cx, 2.0) + Math.pow(cubeTz - cz, 2.0));
-        console.log("Distance cube--cam: " + deltaDist);
 
 
-        console.log("cubx: " + cubeTx + "-- cuby: " + cubeTy + "-- cubz: " + cubeTz);
-
-        // ***** World,View,Projection Matrices
-        var worldViewMatrix = utils.multiplyMatrices(viewMatrix, cubeWorld);
+        // ***** World-View-Projection Matrices *****
+        var worldViewMatrix = utils.multiplyMatrices(viewMatrix, objectWorld);
         var wvpMatrix = utils.multiplyMatrices(perspProjMatrix, worldViewMatrix);
 
-        // lights
-        var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
+        /*
+        // Ligth calculations
+        //var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
 
-        var lightDirectionTransformed = utils.multiplyMatrix3Vector3(utils.sub3x3from4x4(lightDirMatrix), dirLight);
+        //var lightDirectionTransformed = utils.multiplyMatrix3Vector3(utils.sub3x3from4x4(lightDirMatrix), dirLight);
 
-        // rendering -- (location, transpose, value)
+        // normal matrix
+        //var normalMatrix = utils.invertMatrix(utils.transposeMatrix(worldViewMatrix));
+        //skelMesh.normalBuffer;
+        //console.log("NORMAL BUFFER: " + skelMesh.normalBuffer);
+*/
+
+
+
+        // ***** Assign values to shader attributes *****
+        //gl.uniform1i(textureUniform[0], 0);
+        /*
         gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(wvpMatrix));
 
-        var cubeNormalMatrix = utils.invertMatrix(utils.transposeMatrix(worldViewMatrix));
-
-        // rendering -- (location, transpose, value)
-        gl.uniformMatrix4fv(normalMatrixPositionHandle[0], gl.FALSE, utils.transposeMatrix(cubeNormalMatrix));
+        gl.uniformMatrix4fv(normalMatrixPositionHandle[0], gl.FALSE, utils.transposeMatrix(normalMatrix));
 
         // rendering colors, material, etc. -- (location, transpose, value)
-        gl.uniform3fv(materialDiffColorHandle[0], cubeMaterialColor);
+        gl.uniformMatrix4fv(lightDirMatrixPositionHandle[0], gl.FALSE, utils.transposeMatrix(lightDirMatrix));
+        gl.uniform3fv(materialDiffColorHandle[0], objMaterialColor);
         gl.uniform3fv(lightColorHandle[0], dirLightColor);
-        gl.uniform3fv(lightDirectionHandle[0], lightDirectionTransformed);
+        gl.uniform3fv(lightDirectionHandle[0], dirLight);
+*/
+        gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(wvpMatrix));
 
-        gl.bindVertexArray(vaos[0]);
-        gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0.0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform1i(textureUniform[0], skelTexture);
+
+        gl.bindVertexArray(vao);
+        gl.drawElements(gl.TRIANGLES, skelIndices.length, gl.UNSIGNED_SHORT, 0);
 
         window.requestAnimationFrame(drawScene);
         // console.log("scene drawn");
     }
 
-
 }
-/*
-window.onload = main;
-*/
 
 async function init() {
     console.log("init() run");
@@ -309,7 +367,10 @@ async function init() {
     shaderDir = baseDir + "shaders/";
     assetsDir = baseDir + "assets/";
 
-    // ***** CANVAS preperation
+
+
+
+    // ***** CANVAS preperation *****
     var canvas = document.getElementById("canvas");
     gl = canvas.getContext("webgl2");
     if (!gl) {
@@ -318,25 +379,38 @@ async function init() {
     }
     utils.resizeCanvasToDisplaySize(gl.canvas);
 
+    // event listeners for mouse
     canvas.addEventListener("mousewheel", utils.doMouseWheel, false);
     canvas.addEventListener("mousedown", utils.doMouseDown, false);
     canvas.addEventListener("mouseup", utils.doMouseUp, false);
     canvas.addEventListener("mousemove", utils.doMouseMove, false);
-    // console.log("canvas ok");
+
+
+
 
     // ***** Define SHADERS AND PROGRAMS *****
-
     // prepare shaders and program
     await utils.loadFiles([shaderDir + 'vs.glsl', shaderDir + 'fs.glsl'], function (shaderText) {
         var vertexShader = utils.createShader(gl, gl.VERTEX_SHADER, shaderText[0]);
         gl.compileShader(vertexShader);
+        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+            alert("ERROR IN VS SHADER : " + gl.getShaderInfoLog(vertexShader));
+        }
         var fragmentShader = utils.createShader(gl, gl.FRAGMENT_SHADER, shaderText[1]);
         gl.compileShader(fragmentShader);
-        programs[0] = utils.createProgram(gl, vertexShader, fragmentShader);
-        // console.log("programs updated");
+        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+            alert("ERROR IN FS SHADER : " + gl.getShaderInfoLog(fragmentShader));
+        }
+
+        program = utils.createProgram(gl, vertexShader, fragmentShader);
     });
-    gl.linkProgram(programs[0]);
-    gl.useProgram(programs[0]);
+    gl.linkProgram(program);
+    gl.useProgram(program);
+
+    // loading the .obj model
+    var skeletObjStr = await utils.get_objstr(assetsDir + modelStr);
+    skelMesh = new OBJ.Mesh(skeletObjStr);
+
     // run main
     main();
 }

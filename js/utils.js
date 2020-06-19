@@ -654,16 +654,16 @@ var utils = {
             lastMouseY = event.pageY;
 
             if ((dx != 0) || (dy != 0)) {
-                cubeRx = cubeRx + 0.5 * dx;
-                cubeRy = cubeRy - 0.5 * dy;
+                Rx = Rx + 0.5 * dx;
+                Ry = Ry - 0.5 * dy;
             }
         }
     },
 
     doMouseWheel: function (e) {
-        var nLookRadius = camRadius + event.wheelDelta / 200.0;
-        if ((nLookRadius > 2.0) && (nLookRadius < 100.0)) {
-            camRadius = nLookRadius;
+        var translateUpDown = Ty + e.wheelDelta/500.0;
+        if ((translateUpDown > -5.0) && (translateUpDown < 0.0)) {
+            Ty = translateUpDown;
         }
     },
 
