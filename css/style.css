@@ -15,7 +15,7 @@
       .header #title {
           float: left;
           display: block;
-          color: #8B1500;
+          color: white;
           text-align: center;
           padding: 1vh 2vh;
           text-decoration: none;
@@ -36,4 +36,59 @@
           margin: 0;
           position: fixed;
           z-index: 0;
+      }
+
+      #info {
+          background-color: dimgrey;
+          position: absolute;
+          margin: 0;
+          padding: 0;
+          width: 30vh;
+          height: 30vh;
+          top: 6vh;
+          left: 2vh;
+          z-index: 1;
+          border-radius: 2vh;
+      }
+
+      #info #textBox {
+          background-color: darkgray;
+          width: 90%;
+          height: 70%;
+          margin: 0 auto;
+          z-index: 1;
+          text-align: left;
+          padding: 1vh;
+      }
+
+      .bodyparts {
+          background-color: dimgrey;
+          position: absolute;
+          margin: 0;
+          padding: 0;
+          width: 20vh;
+          height: 40vh;
+          bottom: 2vh;
+          left: 2vh;
+          z-index: 1;
+          border-radius: 2vh;
+      }
+
+      h3 {
+          padding: 0;
+          margin: 1vh;
+          text-align: center;
+          border-bottom: 2px solid black;
+      }
+
+      .clipboard {
+          background-color: darkgray;
+          width: 90%;
+          height: 86%;
+          margin: 1vh;
+      }
+
+      .bodyparts button {
+          width: 90%;
+          margin: 1vh;
       }

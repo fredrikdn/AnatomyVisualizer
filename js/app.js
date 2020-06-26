@@ -21,10 +21,10 @@ var cx = 0.0,
 var objectWorld = null,
     skelMesh = null;
 // Skeleton {0, -2.5, -4, 0, 10, 0, 0.07}
-var Tx = 0.0,
-    Ty = -2.50,
+var Tx = 0.60, 
+    Ty = -2.80,
     Tz = -4.0,
-    Rx = 0.0,
+    Rx = -8.0,
     Ry = 10.0,
     Rz = 0.0,
     Scale = 0.07;
@@ -46,7 +46,9 @@ var keys = [],
 // listeners
 window.addEventListener("keyup", utils.keyFunctionUp, false);
 window.addEventListener("keydown", utils.keyFunctionDown, false);
-
+document.querySelectorAll(".btn").forEach(item => {
+    item.addEventListener("click", utils.buttonClick, false);
+});
 // --------------- Assets guide
 // https://webgl2fundamentals.org/webgl/lessons/webgl-load-obj.html
 
@@ -82,66 +84,61 @@ function main() {
     var perspProjMatrix = utils.MakePerspective(90.0, aspect, 0.01, 1000.0);
 
     // Skeleton material color
-    var objMaterialColor = [0.6, 0.1, 0.7];
+    var objMaterialColor = [1.0, 1.0, 1.0];
 
     // Defining directional light
     // 0 --> viewing direction
     var dirLightA = -utils.degToRad(0);
     var dirLightB = -utils.degToRad(90);
     var dirLight = [Math.cos(dirLightA) * Math.cos(dirLightB), Math.sin(dirLightA), Math.cos(dirLightA) * Math.sin(dirLightB)];
-    var dirLightColor = [0.5, 0.2, 0.7];
+    var dirLightColor = [10.0, 10.0, 10.0];
 
-
+    var LPos = [3.0, -10.0, 3.0];
+    var LlightColor = [1.0, 1.0, 1.0];
 
 
     // ***** SHADERS & BUFFERS *****
     // Init attributes
     var positionAttributeLocation = new Array(),
         normalAttributeLocation = new Array();
+
     var matrixLocation = new Array(),
         materialDiffColorHandle = new Array();
+
     var lightDirectionHandle = new Array(),
         lightDirMatrixPositionHandle = new Array(),
         lightColorHandle = new Array();
-    var normalMatrixPositionHandle = new Array();
+
+    var lightPosHandle = new Array(),
+        lightColorHandle = new Array();
+
+    var normalMatrixLocation = new Array();
     var materialDiffColorHandle = new Array();
     var textureCoordinateLocation = new Array();
     var textureUniform = new Array();
 
 
-    // Create a texture
-    /*
-    imgtx = new Image();
-    imgtx.onload = function () {
-        var textureId = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + 0);
-        gl.bindTexture(gl.TEXTURE_2D, textureId);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgtx);
-        // set the filtering so we don't need mips
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    }
-    imgtx.src = TextureData;
-    */
-
     // Attributes located in the shaders ==> attach to program
-    // AttribLocations
+    // lookup where the vertex data needs to go
     positionAttributeLocation[0] = gl.getAttribLocation(program, "inPosition");
     normalAttributeLocation[0] = gl.getAttribLocation(program, "inNormal");
     textureCoordinateLocation[0] = gl.getAttribLocation(program, "inUV");
 
-    // Uniforms
+    // lookup uniforms
     matrixLocation[0] = gl.getUniformLocation(program, "pMatrix");
-    normalMatrixPositionHandle[0] = gl.getUniformLocation(program, 'nMatrix');
+    normalMatrixLocation[0] = gl.getUniformLocation(program, 'nMatrix');
 
     textureUniform[0] = gl.getUniformLocation(program, "uTexture");
 
     materialDiffColorHandle[0] = gl.getUniformLocation(program, 'mDiffColor');
 
+    // Position Light (light bulb)
+    lightPosHandle[0] = gl.getUniformLocation(program, 'lightPosition');
+    lightColorHandle[0] = gl.getUniformLocation(program, 'posLightColor');
+
+    // Directional Light (sunshine)
     lightDirectionHandle[0] = gl.getUniformLocation(program, 'lightDirection');
-    lightColorHandle[0] = gl.getUniformLocation(program, 'lightColor');
+    lightColorHandle[0] = gl.getUniformLocation(program, 'dirLightColor');
     lightDirMatrixPositionHandle[0] = gl.getUniformLocation(program, 'lightDirMatrix');
 
 
@@ -172,7 +169,7 @@ function main() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(skelNormals), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(normalAttributeLocation[0]);
     gl.vertexAttribPointer(normalAttributeLocation[0], 3, gl.FLOAT, false, 0, 0);
-    
+
     // INDEX buffer -- indices from model
     var indexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -192,40 +189,6 @@ function main() {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.generateMipmap(gl.TEXTURE_2D);
     };
-
-    /*
-    var textureId = gl.createTexture();
-    gl.activeTexture(gl.TEXTURE0 + 0);
-    gl.bindTexture(gl.TEXTURE_2D, textureId);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgtx);
-    // set the filtering so we don't need mips
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-*/
-
-    /*
-    // Vertices
-    gl.bindBuffer(gl.ARRAY_BUFFER, skelMesh.vertexBuffer);
-    gl.vertexAttribPointer(programs[0].positionAttributeLocation[0], skelMesh.vertexBuffer,itemSize, gl.FLOAT, false, 0, 0);
-    
-    // TextureVertices
-    if(!skelMesh.textures.length) {
-        gl.disableVertexAttribArray(programs[0].textureCoordinateLocation[0]);
-    } else {
-        gl.enableVertexAttrobArray(programs[0].textureCoordinateLocation[0]);
-        gl.bindBuffer(gl.ARRAY_BUFFER, skelMesh.textureBuffer);
-        gl.vertexAttribPointer(programs[0].textureCoordinateLocation[0], skelMesh.textureBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    }
-    
-    // Normals
-    gl.bindBuffer(gl.ARRAY_BUFFER, skelMesh.normalBuffer);
-    gl.vertexAttribPointer(programs[0].normalAttributeLocation[0], skelMesh.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    
-    // Indices
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, skelMesh.indexBuffer);
-    */
 
     drawScene();
 
@@ -317,17 +280,17 @@ function main() {
         var worldViewMatrix = utils.multiplyMatrices(viewMatrix, objectWorld);
         var wvpMatrix = utils.multiplyMatrices(perspProjMatrix, worldViewMatrix);
 
-        /*
+        
         // Ligth calculations
-        //var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
+        var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
 
-        //var lightDirectionTransformed = utils.multiplyMatrix3Vector3(utils.sub3x3from4x4(lightDirMatrix), dirLight);
+        var lightDirectionTransformed = utils.multiplyMatrix3Vector3(utils.sub3x3from4x4(lightDirMatrix), dirLight);
 
         // normal matrix
-        //var normalMatrix = utils.invertMatrix(utils.transposeMatrix(worldViewMatrix));
+        var normalMatrix = utils.invertMatrix(utils.transposeMatrix(worldViewMatrix));
         //skelMesh.normalBuffer;
         //console.log("NORMAL BUFFER: " + skelMesh.normalBuffer);
-*/
+
 
 
 
@@ -344,11 +307,25 @@ function main() {
         gl.uniform3fv(lightColorHandle[0], dirLightColor);
         gl.uniform3fv(lightDirectionHandle[0], dirLight);
 */
-        gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(wvpMatrix));
-
+        // Texture
         gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(textureUniform[0], skelTexture);
+        
+        // WVP
+        gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(wvpMatrix));
+        // Normal
+        gl.uniformMatrix4fv(normalMatrixLocation[0], gl.FALSE, utils.transposeMatrix(normalMatrix));
+        
+        // Point Light
+        gl.uniform3fv(lightPosHandle[0], LPos);
+        gl.uniform3fv(lightColorHandle[0], LlightColor);
 
+        // lambert diffuse
+        gl.uniform3fv(materialDiffColorHandle[0], objMaterialColor);
+        gl.uniform3fv(lightColorHandle[0], dirLightColor);
+        gl.uniform3fv(lightDirectionHandle[0], dirLight);
+        
+        
         gl.bindVertexArray(vao);
         gl.drawElements(gl.TRIANGLES, skelIndices.length, gl.UNSIGNED_SHORT, 0);
 

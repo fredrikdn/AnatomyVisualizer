@@ -88,7 +88,7 @@ var utils = {
                 alert("ERROR IN VERTEX SHADER : " + gl.getShaderInfoLog(vertexShader));
             }
             if (type == gl.FRAGMENT_SHADER) {
-                alert("ERROR IN FRAGMENT SHADER : " + gl.getShaderInfoLog(vertexShader));
+                alert("ERROR IN FRAGMENT SHADER : " + gl.getShaderInfoLog(fragmentShader));
             }
             gl.deleteShader(shader);
             throw "could not compile shader:" + gl.getShaderInfoLog(shader);
@@ -661,7 +661,7 @@ var utils = {
     },
 
     doMouseWheel: function (e) {
-        var translateUpDown = Ty + e.wheelDelta/500.0;
+        var translateUpDown = Ty + e.wheelDelta / 500.0;
         if ((translateUpDown > -5.0) && (translateUpDown < 0.0)) {
             Ty = translateUpDown;
         }
@@ -781,4 +781,41 @@ var utils = {
             //	console.log(vx + " " + vy + " " + vz + " " + rvx + " " + rvy + " " + rvz);
         }
     },
+
+
+
+    // *** ☜(ﾟヮﾟ☜)
+    // *** BODYPART BUTTONS
+    buttonClick: function (e) {
+        if (e.target.id == "front") {
+            Tx = 0.60,
+            Ty = -2.80,
+            Tz = -4.0,
+            Rx = -8.0,
+            Ry = 10.0,
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "The skeleton is the body part that provides support, shape and protection to the soft tissues and delicate organs of animals."
+        }
+
+        if (e.target.id == "arm") {
+            Tx = 0.60;
+            Ty = -2.50;
+            Tz = -3.0;
+            Rx = -90.0;
+            Ry = 10.0;
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "Your arm is made up of three bones: the upper arm bone (humerus) and two forearm bones (the ulna and the radius)."
+        }
+
+        if (e.target.id == "pelvis") {
+            Tx = 0.30;
+            Ty = -2.50;
+            Tz = -1.50;
+            Rx = -20.0;
+            Ry = 10.0;
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "Pelvis, also called bony pelvis or pelvic girdle, in human anatomy, basin-shaped complex of bones that connects the trunk and the legs, supports and balances the trunk, and contains and supports the intestines, the urinary bladder, and the internal sex organs."
+        }
+    },
+
 }
