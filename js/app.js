@@ -54,7 +54,7 @@ document.querySelectorAll(".btn").forEach(item => {
 
 console.log("app.js started");
 
-// Visualizer Mainada
+// Visualizer Main
 function main() {
     utils.resizeCanvasToDisplaySize(gl.canvas);
     // set viewport (Lower-left corner of the viewport, width, height)
@@ -175,7 +175,7 @@ function main() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(skelIndices), gl.STATIC_DRAW);
 
-    // TEXTURE 
+    // CREATE TEXTURE 
     var skelTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, skelTexture);
 
@@ -288,8 +288,6 @@ function main() {
 
         // normal matrix
         var normalMatrix = utils.invertMatrix(utils.transposeMatrix(worldViewMatrix));
-        //skelMesh.normalBuffer;
-        //console.log("NORMAL BUFFER: " + skelMesh.normalBuffer);
 
 
 

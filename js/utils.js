@@ -789,19 +789,49 @@ var utils = {
     buttonClick: function (e) {
         if (e.target.id == "front") {
             Tx = 0.60,
-            Ty = -2.80,
-            Tz = -4.0,
-            Rx = -8.0,
-            Ry = 10.0,
-            Rz = 0.0;
+                Ty = -2.80,
+                Tz = -4.0,
+                Rx = -8.0,
+                Ry = 10.0,
+                Rz = 0.0;
             document.getElementById("textBox").innerHTML = "The skeleton is the body part that provides support, shape and protection to the soft tissues and delicate organs of animals."
         }
 
+        if (e.target.id == "head") {
+            Tx = 0.30;
+            Ty = -4.5;
+            Tz = -1.6;
+            Rx = 20.0;
+            Ry = 10.0;
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "A head is the part of an organism which usually includes the ears, brain, forehead, cheeks, chin, eyes, nose, and mouth, each of which aid in various sensory functions such as sight, hearing, smell, and taste, respectively. "
+        }
+
+        if (e.target.id == "spine") {
+            Tx = 0.30;
+            Ty = -3.7;
+            Tz = -2.0;
+            Rx = 155.0;
+            Ry = 10.0;
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "The vertebral column, also known as the backbone or spine, is part of the axial skeleton. The vertebral column is the defining characteristic of a vertebrate in which the notochord (a flexible rod of uniform composition) found in all chordates has been replaced by a segmented series of bone: vertebrae separated by intervertebral discs. The vertebral column houses the spinal canal, a cavity that encloses and protects the spinal cord."
+        }
+
+        if (e.target.id == "ribcage") {
+            Tx = 0.30;
+            Ty = -3.7;
+            Tz = -1.75;
+            Rx = -40.0;
+            Ry = 10.0;
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "The rib cage is the arrangement of ribs attached to the vertebral column and sternum in the thorax of most vertebrates, that encloses and protects the heart and lungs. In humans, the rib cage, also known as the thoracic cage, is a bony and cartilaginous structure which surrounds the thoracic cavity and supports the shoulder girdle to form the core part of the human skeleton."
+        }
+
         if (e.target.id == "arm") {
-            Tx = 0.60;
-            Ty = -2.50;
-            Tz = -3.0;
-            Rx = -90.0;
+            Tx = 0.80;
+            Ty = -2.75;
+            Tz = -2.50;
+            Rx = 55.0;
             Ry = 10.0;
             Rz = 0.0;
             document.getElementById("textBox").innerHTML = "Your arm is made up of three bones: the upper arm bone (humerus) and two forearm bones (the ulna and the radius)."
@@ -816,6 +846,27 @@ var utils = {
             Rz = 0.0;
             document.getElementById("textBox").innerHTML = "Pelvis, also called bony pelvis or pelvic girdle, in human anatomy, basin-shaped complex of bones that connects the trunk and the legs, supports and balances the trunk, and contains and supports the intestines, the urinary bladder, and the internal sex organs."
         }
+
+        if (e.target.id == "knee") {
+            Tx = 0.60;
+            Ty = -1.2;
+            Tz = -1.5;
+            Rx = 20.0;
+            Ry = 10.0;
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "In humans and other primates, the knee joins the thigh with the leg and consists of two joints: one between the femur and tibia (tibiofemoral joint), and one between the femur and patella (patellofemoral joint). "
+        }
+
+        if (e.target.id == "foot") {
+            Tx = 0.60;
+            Ty = -0.1;
+            Tz = -1.0;
+            Rx = 20.0;
+            Ry = 10.0;
+            Rz = 0.0;
+            document.getElementById("textBox").innerHTML = "The foot (plural feet) is an anatomical structure found in many vertebrates. It is the terminal portion of a limb which bears weight and allows locomotion. In many animals with feet, the foot is a separate organ at the terminal part of the leg made up of one or more segments or bones, generally including claws or nails."
+        }
+
     },
 
 }

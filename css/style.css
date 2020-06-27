@@ -44,8 +44,8 @@
           margin: 0;
           padding: 0;
           width: 30vh;
-          height: 30vh;
-          top: 6vh;
+          height: 40vh;
+          top: 7.5vh;
           left: 2vh;
           z-index: 1;
           border-radius: 2vh;
@@ -53,12 +53,17 @@
 
       #info #textBox {
           background-color: darkgray;
-          width: 90%;
-          height: 70%;
+          width: 85%;
+          height: 80%;
           margin: 0 auto;
           z-index: 1;
           text-align: left;
           padding: 1vh;
+      }
+
+      #info #textBox p {
+          margin: 0;
+          padding: 0;
       }
 
       .bodyparts {
