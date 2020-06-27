@@ -1,4 +1,4 @@
-// GLOBAL VAR
+// GLOBAL VARS
 var gl;
 var baseDir;
 var shaderDir;
@@ -21,7 +21,7 @@ var cx = 0.0,
 var objectWorld = null,
     skelMesh = null;
 // Skeleton {0, -2.5, -4, 0, 10, 0, 0.07}
-var Tx = 0.60, 
+var Tx = 0.60,
     Ty = -2.80,
     Tz = -4.0,
     Rx = -8.0,
@@ -41,7 +41,23 @@ var keys = [],
     lastMouseX = -100,
     lastMouseY = -100;
 
+// time and animation parameters
+var lastUpdateTime;
+var g_time = 0;
 
+var timeArrayElA = [0, 0];
+var arrayElIdA = [0, 0];
+
+var animFrames;
+
+// init position/rotation
+var ax = 0.60;
+var ay = -2.80;
+var az = -4.0;
+var rax = -8.0;
+var ray = 10.0;
+var raz = 0.0;
+var btnClicked = false;
 
 // listeners
 window.addEventListener("keyup", utils.keyFunctionUp, false);
@@ -192,8 +208,63 @@ function main() {
 
     drawScene();
 
+
     // Draw the scene
     function drawScene() {
+        // time interval
+        /*var currentTime = (new Date).getTime();
+		var deltaT;
+		if(lastUpdateTime){
+			deltaT = (currentTime - lastUpdateTime) / 1000.0;
+		} else {
+			deltaT = 1/50;
+		}
+		lastUpdateTime = currentTime;
+		g_time += deltaT;
+*/
+
+        /*
+                function updatePos(bodypartID) {
+                    if (bodypartID == "arm") {s
+                        if (Tx <= 0.3) {
+                            Tx += 0.01;
+                        }
+                    }
+
+                }
+        */
+        if (btnClicked) {
+            if (Tx <= ax) {
+                Tx += 0.03;
+            }
+            if (Tx >= ax) {
+                Tx -= 0.03;
+            }
+            if (Ty <= ay) {
+                Ty += 0.03;
+            }
+            if (Ty >= ay) {
+                Ty -= 0.03;
+            }
+            if (Tz <= az) {
+                Tz += 0.03;
+            }
+            if (Tz >= az) {
+                Tz -= 0.03;
+            }
+            
+            if (utils.round(Tx, 1) == ax && utils.round(Ty, 1) == ay && utils.round(Tz, 1) == az){
+                 console.log("Before -- TX: " + Tx + " ax: " + ax + " Ty: " + Ty + " ay: " + ay + " Tz: " + Tz + " az: " + az);
+                btnClicked = false;
+            }
+            
+             console.log("After -- TX: " + Tx + " ax: " + ax + " Ty: " + Ty + " ay: " + ay + " Tz: " + Tz + " az: " + az);
+        }
+
+
+
+
+
         // console.log("drawScene() run");
         utils.resizeCanvasToDisplaySize(gl.canvas);
         gl.clearColor(0.85, 0.85, 0.85, 1.0);
@@ -271,6 +342,7 @@ function main() {
         Ty += delta[1] / 10;
         Tz -= delta[2] / 10;
 
+
         console.log("X: " + Tx + "-- Y: " + Ty + "-- Z: " + Tz);
 
 
@@ -280,7 +352,7 @@ function main() {
         var worldViewMatrix = utils.multiplyMatrices(viewMatrix, objectWorld);
         var wvpMatrix = utils.multiplyMatrices(perspProjMatrix, worldViewMatrix);
 
-        
+
         // Ligth calculations
         var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
 
@@ -308,12 +380,12 @@ function main() {
         // Texture
         gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(textureUniform[0], skelTexture);
-        
+
         // WVP
         gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(wvpMatrix));
         // Normal
         gl.uniformMatrix4fv(normalMatrixLocation[0], gl.FALSE, utils.transposeMatrix(normalMatrix));
-        
+
         // Point Light
         gl.uniform3fv(lightPosHandle[0], LPos);
         gl.uniform3fv(lightColorHandle[0], LlightColor);
@@ -322,14 +394,15 @@ function main() {
         gl.uniform3fv(materialDiffColorHandle[0], objMaterialColor);
         gl.uniform3fv(lightColorHandle[0], dirLightColor);
         gl.uniform3fv(lightDirectionHandle[0], dirLight);
-        
-        
+
+
         gl.bindVertexArray(vao);
         gl.drawElements(gl.TRIANGLES, skelIndices.length, gl.UNSIGNED_SHORT, 0);
 
         window.requestAnimationFrame(drawScene);
         // console.log("scene drawn");
     }
+
 
 }
 

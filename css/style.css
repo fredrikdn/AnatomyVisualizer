@@ -44,7 +44,7 @@
           margin: 0;
           padding: 0;
           width: 30vh;
-          height: 40vh;
+          height: 45vh;
           top: 7.5vh;
           left: 2vh;
           z-index: 1;
@@ -56,14 +56,17 @@
           width: 85%;
           height: 80%;
           margin: 0 auto;
+          margin-top: 2vh;
           z-index: 1;
           text-align: left;
           padding: 1vh;
+          border-radius: 0.5vh;
       }
 
       #info #textBox p {
           margin: 0;
           padding: 0;
+          margin-bottom: 1.5vh;
       }
 
       .bodyparts {
@@ -86,11 +89,19 @@
           border-bottom: 2px solid black;
       }
 
+      h4 {
+          margin: 0 auto;
+          padding: 0;
+          margin-bottom: 1vh;
+          
+      }
+
       .clipboard {
           background-color: darkgray;
           width: 90%;
           height: 86%;
           margin: 1vh;
+          border-radius: 0.5vh;
       }
 
       .bodyparts button {

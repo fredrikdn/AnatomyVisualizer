@@ -662,7 +662,7 @@ var utils = {
 
     doMouseWheel: function (e) {
         var translateUpDown = Ty + e.wheelDelta / 500.0;
-        if ((translateUpDown > -5.0) && (translateUpDown < 0.0)) {
+        if ((translateUpDown > -5.0) && (translateUpDown < 5.0)) {
             Ty = translateUpDown;
         }
     },
@@ -784,89 +784,194 @@ var utils = {
 
 
 
-    // *** ☜(ﾟヮﾟ☜)
+
+    // *** Animate object
+    animCall: function (t, mode) {
+
+        // set the current position/rotation ==> move to target position/rotation
+        animFrames = [
+ [2,
+        [Tx, Ty, Tz], Quaternion.fromAxisAngle([1, 0, 0], utils.degToRad(Rx)),
+        [Tx, Ty, Tz], Quaternion.fromAxisAngle([1, 0, 0], utils.degToRad(Rx)),
+        [ax, ay, az], Quaternion.fromAxisAngle([1, 0, 0], utils.degToRad(rax)),
+        [ax, ay, az], Quaternion.fromAxisAngle([1, 0, 0], utils.degToRad(rax))]
+];
+        var arrayElId = arrayElIdA[mode ? 0 : 1];
+        var timeArrayEl = timeArrayElA[mode ? 0 : 1];
+
+        if (timeArrayEl) {
+            if (t - timeArrayEl > animFrames[arrayElId][0]) {
+                timeArrayEl += animFrames[arrayElId][0];
+                arrayElId = (arrayElId + 1) % animFrames.length;
+            }
+        } else {
+            timeArrayEl = t;
+            arrayElId = 0;
+        }
+
+        var dt = t - timeArrayEl;
+        var alpha = dt / animFrames[arrayElId][0];
+        var nextElId = (arrayElId + 1) % animFrames.length;
+
+        var tx, ty, tz, qa0, qa1, qa2, qa3;
+        if (mode) {
+            tx = [animFrames[arrayElId][1][0], animFrames[arrayElId][3][0],
+			  animFrames[arrayElId][5][0], animFrames[arrayElId][7][0]];
+            ty = [animFrames[arrayElId][1][1], animFrames[arrayElId][3][1],
+			  animFrames[arrayElId][5][1], animFrames[arrayElId][7][1]];
+            tz = [animFrames[arrayElId][1][2], animFrames[arrayElId][3][2],
+			  animFrames[arrayElId][5][2], animFrames[arrayElId][5][2]];
+
+            qa0 = animFrames[arrayElId][2];
+            qa1 = animFrames[arrayElId][4];
+            qa3 = animFrames[arrayElId][6];
+            qa2 = animFrames[arrayElId][8];
+        } else {
+            tx = [animFrames[arrayElId][1][0], animFrames[arrayElId][3][0],
+			  2 * animFrames[nextElId][3][0] - animFrames[nextElId][1][0], animFrames[nextElId][1][0]];
+            ty = [animFrames[arrayElId][1][1], animFrames[arrayElId][3][1],
+			  2 * animFrames[nextElId][3][1] - animFrames[nextElId][1][1], animFrames[nextElId][1][1]];
+            tz = [animFrames[arrayElId][1][2], animFrames[arrayElId][3][2],
+			  2 * animFrames[nextElId][3][2] - animFrames[nextElId][1][2], animFrames[nextElId][1][2]];
+
+            qa0 = animFrames[arrayElId][2];
+            qa1 = animFrames[arrayElId][4];
+            qa3 = animFrames[nextElId][2];
+            qa2 = qa3.slerp(animFrames[nextElId][4])(-1);
+        }
+
+        var qx = [qa0.x, qa1.x, qa2.x, qa3.x];
+        var qy = [qa0.y, qa1.y, qa2.y, qa3.y];
+        var qz = [qa0.z, qa1.z, qa2.z, qa3.z];
+        var qw = [qa0.w, qa1.w, qa2.w, qa3.w];
+
+        var q01 = qa0.slerp(qa1)(alpha);
+        var q12 = qa1.slerp(qa2)(alpha);
+        var q23 = qa2.slerp(qa3)(alpha);
+        var q012 = q01.slerp(q12)(alpha);
+        var q123 = q12.slerp(q23)(alpha);
+        var qalpha = q012.slerp(q123)(alpha);
+        var MR = qalpha.toMatrix4();
+
+        var uma = 1 - alpha;
+        var t0 = uma * uma * uma;
+        var t1 = 3 * uma * uma * alpha;
+        var t2 = 3 * uma * alpha * alpha;
+        var t3 = alpha * alpha * alpha;
+
+        var MT = utils.MakeTranslateMatrix(tx[0] * t0 + tx[1] * t1 + tx[2] * t2 + tx[3] * t3,
+            ty[0] * t0 + ty[1] * t1 + ty[2] * t2 + ty[3] * t3,
+            tz[0] * t0 + tz[1] * t1 + tz[2] * t2 + tz[3] * t3);
+
+        arrayElIdA[mode ? 0 : 1] = arrayElId;
+        timeArrayElA[mode ? 0 : 1] = timeArrayEl;
+
+        return utils.multiplyMatrices(MT, MR);
+    },
+
+
+
+    // *** CALCULATE DECIMAL
+    round: function (v, p) {
+        var multiplier = Math.pow(10, p || 0);
+        return Math.round(v * multiplier) / multiplier;
+    },
+
+
+
+
     // *** BODYPART BUTTONS
     buttonClick: function (e) {
         if (e.target.id == "front") {
-            Tx = 0.60,
-                Ty = -2.80,
-                Tz = -4.0,
+            ax = 0.60,
+                ay = -2.80,
+                az = -4.0,
                 Rx = -8.0,
                 Ry = 10.0,
                 Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "The skeleton is the body part that provides support, shape and protection to the soft tissues and delicate organs of animals."
+            btnClicked = true;
+            
+            document.getElementById("textBox").innerHTML = "<h4>Whole Body</h4>The skeleton is the body part that provides support, shape and protection to the soft tissues and delicate organs.";
         }
 
         if (e.target.id == "head") {
-            Tx = 0.30;
-            Ty = -4.5;
-            Tz = -1.6;
+            ax = 0.3;
+            ay = -4.5;
+            az = -1.6;
             Rx = 20.0;
             Ry = 10.0;
             Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "A head is the part of an organism which usually includes the ears, brain, forehead, cheeks, chin, eyes, nose, and mouth, each of which aid in various sensory functions such as sight, hearing, smell, and taste, respectively. "
+            btnClicked = true;
+            document.getElementById("textBox").innerHTML = "<h4>Head</h4>A head is the part of an organism which usually includes the ears, brain, forehead, cheeks, chin, eyes, nose, and mouth, each of which aid in various sensory functions such as sight, hearing, smell, and taste, respectively. ";
         }
 
         if (e.target.id == "spine") {
-            Tx = 0.30;
-            Ty = -3.7;
-            Tz = -2.0;
+            ax = 0.30;
+            ay = -3.7;
+            az = -2.0;
             Rx = 155.0;
             Ry = 10.0;
             Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "The vertebral column, also known as the backbone or spine, is part of the axial skeleton. The vertebral column is the defining characteristic of a vertebrate in which the notochord (a flexible rod of uniform composition) found in all chordates has been replaced by a segmented series of bone: vertebrae separated by intervertebral discs. The vertebral column houses the spinal canal, a cavity that encloses and protects the spinal cord."
+            btnClicked = true;
+            document.getElementById("textBox").innerHTML = "<h4>Vertebral Column</h4>The vertebral column, also known as the backbone or spine, is part of the axial skeleton. The vertebral column is the defining characteristic of a vertebrate in which the notochord (a flexible rod of uniform composition) found in all chordates has been replaced by a segmented series of bone: vertebrae separated by intervertebral discs. The vertebral column houses the spinal canal, a cavity that encloses and protects the spinal cord.";
         }
 
         if (e.target.id == "ribcage") {
-            Tx = 0.30;
-            Ty = -3.7;
-            Tz = -1.75;
+            ax = 0.30;
+            ay = -3.7;
+            az = -1.75;
             Rx = -40.0;
             Ry = 10.0;
             Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "The rib cage is the arrangement of ribs attached to the vertebral column and sternum in the thorax of most vertebrates, that encloses and protects the heart and lungs. In humans, the rib cage, also known as the thoracic cage, is a bony and cartilaginous structure which surrounds the thoracic cavity and supports the shoulder girdle to form the core part of the human skeleton."
+            btnClicked = true;
+            document.getElementById("textBox").innerHTML = "<h4>Rib Cage</h4>The rib cage is the arrangement of ribs attached to the vertebral column and sternum in the thorax of most vertebrates, that encloses and protects the heart and lungs. In humans, the rib cage, also known as the thoracic cage, is a bony and cartilaginous structure which surrounds the thoracic cavity and supports the shoulder girdle to form the core part of the human skeleton.";
         }
 
         if (e.target.id == "arm") {
-            Tx = 0.80;
-            Ty = -2.75;
-            Tz = -2.50;
+            ax = 0.80;
+            ay = -2.75;
+            az = -2.50;
             Rx = 55.0;
             Ry = 10.0;
             Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "Your arm is made up of three bones: the upper arm bone (humerus) and two forearm bones (the ulna and the radius)."
+            btnClicked = true;
+            document.getElementById("textBox").innerHTML = "<h4>Arm</h4>Your arm is made up of three bones: the upper arm bone (humerus) and two forearm bones (the ulna and the radius).";
         }
 
         if (e.target.id == "pelvis") {
-            Tx = 0.30;
-            Ty = -2.50;
-            Tz = -1.50;
+            ax = 0.30;
+            ay = -2.50;
+            az = -1.50;
             Rx = -20.0;
             Ry = 10.0;
             Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "Pelvis, also called bony pelvis or pelvic girdle, in human anatomy, basin-shaped complex of bones that connects the trunk and the legs, supports and balances the trunk, and contains and supports the intestines, the urinary bladder, and the internal sex organs."
+            btnClicked = true;
+            document.getElementById("textBox").innerHTML = "<h4>Pelvis</h4>Pelvis, also called bony pelvis or pelvic girdle, in human anatomy, basin-shaped complex of bones that connects the trunk and the legs, supports and balances the trunk, and contains and supports the intestines, the urinary bladder, and the internal sex organs.";
         }
 
         if (e.target.id == "knee") {
-            Tx = 0.60;
-            Ty = -1.2;
-            Tz = -1.5;
+            ax = 0.60;
+            ay = -1.2;
+            az = -1.5;
             Rx = 20.0;
             Ry = 10.0;
             Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "In humans and other primates, the knee joins the thigh with the leg and consists of two joints: one between the femur and tibia (tibiofemoral joint), and one between the femur and patella (patellofemoral joint). "
+            btnClicked = true;
+            document.getElementById("textBox").innerHTML = "<h4>Knee</h4>In humans and other primates, the knee joins the thigh with the leg and consists of two joints: one between the femur and tibia (tibiofemoral joint), and one between the femur and patella (patellofemoral joint). ";
         }
 
         if (e.target.id == "foot") {
-            Tx = 0.60;
-            Ty = -0.1;
-            Tz = -1.0;
+            ax = 0.60;
+            ay = -0.1;
+            az = -1.0;
             Rx = 20.0;
             Ry = 10.0;
             Rz = 0.0;
-            document.getElementById("textBox").innerHTML = "The foot (plural feet) is an anatomical structure found in many vertebrates. It is the terminal portion of a limb which bears weight and allows locomotion. In many animals with feet, the foot is a separate organ at the terminal part of the leg made up of one or more segments or bones, generally including claws or nails."
+            btnClicked = true;
+            document.getElementById("textBox").innerHTML = "<h4>Foot</h4>The foot (plural feet) is an anatomical structure found in many vertebrates. It is the terminal portion of a limb which bears weight and allows locomotion. In many animals with feet, the foot is a separate organ at the terminal part of the leg made up of one or more segments or bones, generally including claws or nails.";
         }
 
     },
+
 
 }
