@@ -7,7 +7,7 @@ var program;
 var modelStr = 'skeleton.obj';
 var textureStr = 'skeleton.png';
 
-// camera parameters - init position
+// camera parameters - camera space - looking down the (-) z-axis
 var viewMatrix;
 var cx = 0.0,
     cy = 0.0,
@@ -15,12 +15,11 @@ var cx = 0.0,
     elev = 0.0,
     ang = 0.0,
     roll = 0.0;
-//camRadius = 10.0;
 
 // Object parameters - init
 var objectWorld = null,
     skelMesh = null;
-// Skeleton {0, -2.5, -4, 0, 10, 0, 0.07}
+// Skeleton
 var Tx = 0.60,
     Ty = -2.80,
     Tz = -4.0,
@@ -41,6 +40,7 @@ var keys = [],
     lastMouseX = -100,
     lastMouseY = -100;
 
+/*
 // time and animation parameters
 var lastUpdateTime;
 var g_time = 0;
@@ -49,14 +49,15 @@ var timeArrayElA = [0, 0];
 var arrayElIdA = [0, 0];
 
 var animFrames;
+*/
 
-// init position/rotation
-var ax = 0.60;
-var ay = -2.80;
-var az = -4.0;
-var rax = -8.0;
-var ray = 10.0;
-var raz = 0.0;
+// target positions
+var ax,
+    ay,
+    az,
+    rax,
+    ray,
+    raz;
 var btnClicked = false;
 
 // listeners
@@ -65,10 +66,8 @@ window.addEventListener("keydown", utils.keyFunctionDown, false);
 document.querySelectorAll(".btn").forEach(item => {
     item.addEventListener("click", utils.buttonClick, false);
 });
-// --------------- Assets guide
-// https://webgl2fundamentals.org/webgl/lessons/webgl-load-obj.html
 
-console.log("app.js started");
+//console.log("app.js started");
 
 // Visualizer Main
 function main() {
@@ -78,13 +77,13 @@ function main() {
     // clearing BUFFERS
     gl.clearColor(0.85, 0.85, 0.85, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // enable depth testing and back-face culling
+    // enable depth testing (depth comparisons) and back-face culling
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
 
 
-    // Model - Position (vertices), normals, indices, UVcoords
+    // Model - Position (vertices), normals, indices, UVcoords from webgl-loader
     var skelVertices = skelMesh.vertices;
     var skelNormals = skelMesh.vertexNormals;
     var skelIndices = skelMesh.indices;
@@ -95,20 +94,17 @@ function main() {
 
     // ***** MATRICES, LIGHTS, COLOR *****
 
-    // Perspective
-    var aspect = gl.canvas.width / gl.canvas.height;
-    var perspProjMatrix = utils.MakePerspective(90.0, aspect, 0.01, 1000.0);
-
     // Skeleton material color
-    var objMaterialColor = [1.0, 1.0, 1.0];
+    var objMaterialColor = [0.80, 0.80, 0.80];
 
     // Defining directional light
     // 0 --> viewing direction
-    var dirLightA = -utils.degToRad(0);
-    var dirLightB = -utils.degToRad(90);
+    var dirLightA = -utils.degToRad(45);
+    var dirLightB = -utils.degToRad(120);
     var dirLight = [Math.cos(dirLightA) * Math.cos(dirLightB), Math.sin(dirLightA), Math.cos(dirLightA) * Math.sin(dirLightB)];
-    var dirLightColor = [10.0, 10.0, 10.0];
+    var dirLightColor = [0.70, 0.70, 0.70];
 
+    // point light
     var LPos = [3.0, -10.0, 3.0];
     var LlightColor = [1.0, 1.0, 1.0];
 
@@ -134,7 +130,7 @@ function main() {
     var textureUniform = new Array();
 
 
-    // Attributes located in the shaders ==> attach to program
+    // Attributes, uniforms located in the shaders ==> attach to program
     // lookup where the vertex data needs to go
     positionAttributeLocation[0] = gl.getAttribLocation(program, "inPosition");
     normalAttributeLocation[0] = gl.getAttribLocation(program, "inNormal");
@@ -152,7 +148,7 @@ function main() {
     lightPosHandle[0] = gl.getUniformLocation(program, 'lightPosition');
     lightColorHandle[0] = gl.getUniformLocation(program, 'posLightColor');
 
-    // Directional Light (sunshine)
+    // Directional Light (direct)
     lightDirectionHandle[0] = gl.getUniformLocation(program, 'lightDirection');
     lightColorHandle[0] = gl.getUniformLocation(program, 'dirLightColor');
     lightDirMatrixPositionHandle[0] = gl.getUniformLocation(program, 'lightDirMatrix');
@@ -160,7 +156,7 @@ function main() {
 
 
 
-    // initialize vertex array object and bind (VAO)
+    // initialize vertex array object and bind (VAO) - where the data is stored
     var vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
 
@@ -170,6 +166,7 @@ function main() {
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(skelVertices), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(positionAttributeLocation[0]);
+    // (index, size, type, normalized, stride, offset)
     gl.vertexAttribPointer(positionAttributeLocation[0], 3, gl.FLOAT, false, 0, 0);
 
     // TEXTURE buffer -- texCoords from model
@@ -191,6 +188,7 @@ function main() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(skelIndices), gl.STATIC_DRAW);
 
+
     // CREATE TEXTURE 
     var skelTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, skelTexture);
@@ -200,9 +198,11 @@ function main() {
     imgtx.onload = function () {
         gl.bindTexture(gl.TEXTURE_2D, skelTexture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        // 2D texture image
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgtx);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        // generate a set of mipmaps for the texture
         gl.generateMipmap(gl.TEXTURE_2D);
     };
 
@@ -223,16 +223,7 @@ function main() {
 		g_time += deltaT;
 */
 
-        /*
-                function updatePos(bodypartID) {
-                    if (bodypartID == "arm") {s
-                        if (Tx <= 0.3) {
-                            Tx += 0.01;
-                        }
-                    }
-
-                }
-        */
+        // Animate object to target position given button
         if (btnClicked) {
             if (Tx <= ax) {
                 Tx += 0.03;
@@ -252,13 +243,9 @@ function main() {
             if (Tz >= az) {
                 Tz -= 0.03;
             }
-            
-            if (utils.round(Tx, 1) == ax && utils.round(Ty, 1) == ay && utils.round(Tz, 1) == az){
-                 console.log("Before -- TX: " + Tx + " ax: " + ax + " Ty: " + Ty + " ay: " + ay + " Tz: " + Tz + " az: " + az);
+            if (utils.round(Tx, 1) == ax && utils.round(Ty, 1) == ay && utils.round(Tz, 1) == az) {
                 btnClicked = false;
             }
-            
-             console.log("After -- TX: " + Tx + " ax: " + ax + " Ty: " + Ty + " ay: " + ay + " Tz: " + Tz + " az: " + az);
         }
 
 
@@ -271,11 +258,10 @@ function main() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         // view matrix with parameters (cx, cy, cz, elev, ang, roll) {aligned to the Z-axis}
-        viewMatrix = utils.MakeViewR(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        viewMatrix = utils.MakeViewR(cx, cy, cz, elev, ang, roll);
 
         // Model world space - update for movement
         objectWorld = utils.MakeWorld(Tx, Ty, Tz, Rx, Ry, Rz, Scale);
-        // ***** MOVE/ROTATE/ZOOM with Keys & Mouse (WASD)
 
         // quaternion ----- NOT USED
         /*
@@ -333,22 +319,24 @@ function main() {
         }
 */
 
-        // KEYBOARD:
+        // KEYBOARD MOVEMENT:
         // update the position according to vx,vy,vz ==> "WASD"
-        console.log("cx: " + cx + "-- cy: " + cy + "-- cz: " + cz);
-        console.log("vx: " + vx + "-- vy: " + vy + "-- vz: " + vz);
+        //console.log("cx: " + cx + "-- cy: " + cy + "-- cz: " + cz);
+        //console.log("vx: " + vx + "-- vy: " + vy + "-- vz: " + vz);
         delta = [vx, vy, vz, 0.0];
-        Tx -= delta[0] / 10;
-        Ty += delta[1] / 10;
-        Tz -= delta[2] / 10;
-
-
-        console.log("X: " + Tx + "-- Y: " + Ty + "-- Z: " + Tz);
+        Tx -= delta[0] / 20;
+        Ty += delta[1] / 20;
+        Tz -= delta[2] / 20;
+        //console.log("X: " + Tx + "-- Y: " + Ty + "-- Z: " + Tz);
 
 
 
 
         // ***** World-View-Projection Matrices *****
+        // Perspective
+        var aspect = gl.canvas.width / gl.canvas.height;
+        var perspProjMatrix = utils.MakePerspective(90.0, aspect, 0.01, 1000.0);
+
         var worldViewMatrix = utils.multiplyMatrices(viewMatrix, objectWorld);
         var wvpMatrix = utils.multiplyMatrices(perspProjMatrix, worldViewMatrix);
 
@@ -356,6 +344,7 @@ function main() {
         // Ligth calculations
         var lightDirMatrix = utils.invertMatrix(utils.transposeMatrix(viewMatrix));
 
+        // 3x3 upper left
         var lightDirectionTransformed = utils.multiplyMatrix3Vector3(utils.sub3x3from4x4(lightDirMatrix), dirLight);
 
         // normal matrix
@@ -365,7 +354,7 @@ function main() {
 
 
         // ***** Assign values to shader attributes *****
-        //gl.uniform1i(textureUniform[0], 0);
+        
         /*
         gl.uniformMatrix4fv(matrixLocation[0], gl.FALSE, utils.transposeMatrix(wvpMatrix));
 
@@ -377,7 +366,7 @@ function main() {
         gl.uniform3fv(lightColorHandle[0], dirLightColor);
         gl.uniform3fv(lightDirectionHandle[0], dirLight);
 */
-        // Texture
+        // Texture - utilize skelTexture
         gl.activeTexture(gl.TEXTURE0);
         gl.uniform1i(textureUniform[0], skelTexture);
 
@@ -386,17 +375,18 @@ function main() {
         // Normal
         gl.uniformMatrix4fv(normalMatrixLocation[0], gl.FALSE, utils.transposeMatrix(normalMatrix));
 
+        /*
         // Point Light
         gl.uniform3fv(lightPosHandle[0], LPos);
         gl.uniform3fv(lightColorHandle[0], LlightColor);
-
+        */
+        
         // lambert diffuse
         gl.uniform3fv(materialDiffColorHandle[0], objMaterialColor);
         gl.uniform3fv(lightColorHandle[0], dirLightColor);
         gl.uniform3fv(lightDirectionHandle[0], dirLight);
 
-
-        gl.bindVertexArray(vao);
+        // draw elements, creating tringles from the indices
         gl.drawElements(gl.TRIANGLES, skelIndices.length, gl.UNSIGNED_SHORT, 0);
 
         window.requestAnimationFrame(drawScene);
@@ -406,9 +396,10 @@ function main() {
 
 }
 
+// run on initializing
 async function init() {
-    console.log("init() run");
-    // ***** variables to enable loading of shaders/.glsl
+    //console.log("init() run");
+    // ***** variables to enable loading of shaders/.glsl and assets
     var path = window.location.pathname;
     var page = path.split("/").pop();
     baseDir = window.location.href.replace(page, '');

@@ -8,7 +8,7 @@ var utils = {
         const expandFullScreen = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            console.log(canvas.width + " " + window.innerWidth);
+            //console.log(canvas.width + " " + window.innerWidth);
 
         };
         expandFullScreen();
@@ -919,7 +919,7 @@ var utils = {
         if (e.target.id == "ribcage") {
             ax = 0.30;
             ay = -3.7;
-            az = -1.75;
+            az = -1.8;
             Rx = -40.0;
             Ry = 10.0;
             Rz = 0.0;
@@ -929,7 +929,7 @@ var utils = {
 
         if (e.target.id == "arm") {
             ax = 0.80;
-            ay = -2.75;
+            ay = -2.8;
             az = -2.50;
             Rx = 55.0;
             Ry = 10.0;

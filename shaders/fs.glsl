@@ -3,7 +3,7 @@
 precision mediump float;
 
 in vec2 fsUV;
-//in vec3 fsPos;
+in vec3 fsPos;
 in vec3 fsNorm;
 
 uniform vec3 mDiffColor;
@@ -21,9 +21,9 @@ void main() {
     vec3 norm = normalize(fsNorm);
     //vec3 Ldir = normalize(lightPosition - fsPos); 
     
-    vec3 lambertColor = mDiffColor * dirLightColor * dot(-lightDirection, norm);
+    vec3 lambertColor = mDiffColor*(dirLightColor * dot(-lightDirection, norm));
     
     vec4 texcol = texture(uTexture, fsUV);
-    vec4 finalColor = texcol*vec4(clamp(lambertColor, 0.0, 1.0), 1.0);
-    outColor = texcol*finalColor; 
+    vec4 finalColor = vec4(clamp(lambertColor, 0.0, 1.0), 1.0);
+    outColor = texcol+finalColor; 
 }
